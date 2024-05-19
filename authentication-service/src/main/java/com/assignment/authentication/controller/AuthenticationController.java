@@ -1,11 +1,14 @@
 package com.assignment.authentication.controller;
 
+import com.assignment.authentication.exception.InvalidCredentialsException;
 import com.assignment.authentication.model.LoginAttempt;
 import com.assignment.authentication.model.LoginRequest;
 import com.assignment.authentication.service.AuthenticationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
@@ -22,7 +25,7 @@ public class AuthenticationController {
     private AuthenticationService authenticationService;
 
     @PostMapping("/login")
-    public Map<String, Object> login(@RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<Map<String, Object>> login(@RequestBody LoginRequest loginRequest) {
         Map<String, Object> response = new HashMap<>();
         try {
             logger.info("Received login request for username: {}", loginRequest.getUsername());
@@ -32,12 +35,15 @@ public class AuthenticationController {
 
             response.put("message", message);
 
-            return response;
-        } catch (Exception e) {
+            return ResponseEntity.ok(response);
+        } catch (InvalidCredentialsException e) {
             logger.error("Authentication failed for user: {}", loginRequest.getUsername(), e);
             response.put("error", "Invalid credentials");
-            return response;
-
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        } catch (Exception e) {
+            logger.error("An unexpected error occurred during authentication for user: {}", loginRequest.getUsername(), e);
+            response.put("error", "An unexpected error occurred");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 
